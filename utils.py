@@ -21,14 +21,20 @@ def plot_learning_curve(history):
 
     plt.sca(axes[0])
     plt.plot(epochs, history['loss'], 'b-', label='Train')
-    plt.plot(epochs, history['val_loss'], 'b--', label='Val')
+    try:
+        plt.plot(epochs, history['val_loss'], 'b--', label='Val')
+    except KeyError:
+        pass
     plt.ylabel('Loss')
     plt.ylim(0, 1.5)
     plt.legend()
 
     plt.sca(axes[1])
     plt.plot(epochs, history['acc_metric'], 'r-', label='Train')
-    plt.plot(epochs, history['val_acc_metric'], 'r--', label='Val')
+    try:
+        plt.plot(epochs, history['val_acc_metric'], 'r--', label='Val')
+    except KeyError:
+        pass
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy / %')
     plt.legend()
@@ -56,9 +62,13 @@ def load_nifti(file_path, mask=None, z_factor=None, remove_nan=True):
 
 # Transparent colormap (alpha to red), that is used for plotting an overlay.
 # See https://stackoverflow.com/questions/37327308/add-alpha-to-an-existing-matplotlib-colormap
-cmap = plt.cm.Reds
-alpha_cmap = cmap(np.arange(cmap.N))
-alpha_cmap[:,-1] = np.linspace(0, 1, cmap.N)
+#cmap = plt.cm.Reds
+#alpha_cmap = cmap(np.arange(cmap.N-20))
+#print(cmap.N)
+#print(alpha_cmap)
+alpha_cmap = np.zeros((256, 4))
+alpha_cmap[:, 0] = 0.8
+alpha_cmap[:, -1] = np.linspace(0, 1, 256)#cmap.N-20)
 alpha_cmap = mpl.colors.ListedColormap(alpha_cmap)
 
 
@@ -66,57 +76,77 @@ alpha_cmap = mpl.colors.ListedColormap(alpha_cmap)
 # TODO: Show figure colorbar.
 # TODO: Calculate vmin and vmax automatically, maybe by log-scaling the overlay.
 
-def plot_slices(struct_arr, num_slices=10, overlay=None, overlay_vmin=0, overlay_vmax=0.005):
+def plot_slices(struct_arr, overlay=None, num_slices=10, overlay_cmap=None, vmin=None, vmax=None, overlay_vmin=None, overlay_vmax=None):
     """
-    Plot equally spaced slices of a 3D image along each dimension.
+    Plot equally spaced slices of a 3D image along every axis.
     """
+    if vmin is None:
+        vmin = struct_arr.min()
+    if vmax is None:
+        vmax = struct_arr.max()
+    if overlay_vmin is None and overlay is not None:
+        overlay_vmin = overlay.min()
+    if overlay_vmax is None and overlay is not None:
+        overlay_vmax = overlay.max()
+    print(vmin, vmax, overlay_vmin, overlay_vmax)
+    
+    if overlay_cmap is None:
+        overlay_cmap = alpha_cmap
+        
     fig, axes = plt.subplots(3, 8, figsize=(15, 6))
+    intervals = np.asarray(struct_arr.shape) / (num_slices - 1)
 
-    dimensions = np.asarray(struct_arr.shape)
-    intervals = dimensions / (num_slices - 1)
+    for axis, axis_label in zip([0, 1, 2], ['x', 'x', 'z']):
+        for i, ax in enumerate(axes[axis]):
+            i_slice = int(intervals[axis] / 2 + i * intervals[axis])
+            
+            plt.sca(ax)
+            plt.axis('off')
+            plt.imshow(np.take(struct_arr, i_slice, axis=axis), vmin=vmin, vmax=vmax, cmap='gray', interpolation=None)
+            plt.text(0.03, 0.97, '{}={}'.format(axis_label, i_slice), color='white', 
+                     horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
+            
+            if overlay is not None:
+                plt.imshow(np.take(overlay, i_slice, axis=axis), cmap=overlay_cmap, 
+                           vmin=overlay_vmin, vmax=overlay_vmax, interpolation=None)
 
-    def plot_slice(arr_slice, i_slice, dimension_label, ax):
-        plt.sca(ax)
-        plt.axis('off')
-        plt.imshow(arr_slice, cmap='gray', interpolation=None)
-        plt.text(0.03, 0.97, '{}={}'.format(dimension_label, i_slice), color='white', horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
+def animate_slices(struct_arr, overlay=None, axis=0, reverse_direction=False, interval=40, vmin=None, vmax=None, overlay_vmin=None, overlay_vmax=None):
+    """
+    Create a matplotlib animation that moves through a 3D image along a specified axis.
+    """
+    
+    if vmin is None:
+        vmin = struct_arr.min()
+    if vmax is None:
+        vmax = struct_arr.max()
+    if overlay_vmin is None and overlay is not None:
+        overlay_vmin = overlay.min()
+    if overlay_vmax is None and overlay is not None:
+        overlay_vmax = overlay.max()
+        
+    fig, ax = plt.subplots()
+    axis_label = ['x', 'y', 'z'][axis]
 
+    # TODO: If I select slice 50 here at the beginning, the plots look different.
+    im = ax.imshow(np.take(struct_arr, 0, axis=axis), vmin=vmin, vmax=vmax, cmap='gray', interpolation=None, animated=True)
+    if overlay is not None:
+        im_overlay = ax.imshow(np.take(overlay, 0, axis=axis), vmin=overlay_vmin, vmax=overlay_vmax, 
+                               cmap=alpha_cmap, interpolation=None, animated=True)
+    text = ax.text(0.03, 0.97, '{}={}'.format(axis_label, 0), color='white', 
+                   horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
+    ax.axis('off')
 
-    for i, ax in enumerate(axes[0]):
-        i_slice = int(intervals[0] / 2 + i * intervals[0])
-        #if channels_first:
-        #    arr_slice = struct_arr[0, i_slice, :, :]
-        #else:
-        arr_slice = struct_arr[i_slice, :, :]
-        plot_slice(arr_slice, i_slice, 'x', ax)
-
+    def update(i):
+        im.set_array(np.take(struct_arr, i, axis=axis))
         if overlay is not None:
-            plt.imshow(overlay[i_slice, :, :], cmap=alpha_cmap, vmin=overlay_vmin, vmax=overlay_vmax, interpolation=None)
-            #plt.colorbar()
+            im_overlay.set_array(np.take(overlay, i, axis=axis))
+        text.set_text('{}={}'.format(axis_label, i))
+        return im, text
 
-    for i, ax in enumerate(axes[1]):
-        i_slice = int(intervals[1] / 2 + i * intervals[1])
-        #if channels_first:
-        #    arr_slice = struct_arr[0, :, i_slice, :]
-        #else:
-        arr_slice = struct_arr[:, i_slice, :]
-        plot_slice(arr_slice, i_slice, 'y', ax)
-
-        if overlay is not None:
-            plt.imshow(overlay[:, i_slice, :], cmap=alpha_cmap, vmin=overlay_vmin, vmax=overlay_vmax, interpolation=None)
-            #plt.colorbar()
-
-
-    for i, ax in enumerate(axes[2]):
-        i_slice = int(intervals[2] / 2 + i * intervals[2])
-        #if channels_first:
-        #    arr_slice = struct_arr[0, :, :, i_slice]
-        #else:
-        arr_slice = struct_arr[:, :, i_slice]
-        plot_slice(arr_slice, i_slice, 'z', ax)
-
-        if overlay is not None:
-            plt.imshow(overlay[:, :, i_slice], cmap=alpha_cmap, vmin=overlay_vmin, vmax=overlay_vmax, interpolation=None)
-            #plt.colorbar()
-
-#plot_slices(struct_arr)#, channels_first=False)
+    num_frames = struct_arr.shape[axis]
+    if reverse_direction:
+        frames = np.arange(num_frames-1, 0, -1)
+    else:
+        frames = np.arange(0, num_frames)
+    
+    return mpl.animation.FuncAnimation(fig, update, frames=frames, interval=interval, blit=True)
