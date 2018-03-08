@@ -66,19 +66,35 @@ def load_nifti(file_path, mask=None, z_factor=None, remove_nan=True):
 #alpha_cmap = cmap(np.arange(cmap.N-20))
 #print(cmap.N)
 #print(alpha_cmap)
-alpha_cmap = np.zeros((256, 4))
-alpha_cmap[:, 0] = 0.8
-alpha_cmap[:, -1] = np.linspace(0, 1, 256)#cmap.N-20)
-alpha_cmap = mpl.colors.ListedColormap(alpha_cmap)
+alpha_to_red_cmap = np.zeros((256, 4))
+alpha_to_red_cmap[:, 0] = 0.8
+alpha_to_red_cmap[:, -1] = np.linspace(0, 1, 256)#cmap.N-20)  # alpha values
+alpha_to_red_cmap = mpl.colors.ListedColormap(alpha_to_red_cmap)
+
+red_to_alpha_cmap = np.zeros((256, 4))
+red_to_alpha_cmap[:, 0] = 0.8
+red_to_alpha_cmap[:, -1] = np.linspace(1, 0, 256)#cmap.N-20)  # alpha values
+red_to_alpha_cmap = mpl.colors.ListedColormap(red_to_alpha_cmap)
 
 
 # TODO: Calculating the slice numbers gives index error for some values of num_slices.
 # TODO: Show figure colorbar.
 # TODO: Calculate vmin and vmax automatically, maybe by log-scaling the overlay.
 
-def plot_slices(struct_arr, overlay=None, num_slices=10, overlay_cmap=None, vmin=None, vmax=None, overlay_vmin=None, overlay_vmax=None):
+def plot_slices(struct_arr, num_slices=10, cmap='gray', vmin=None, vmax=None, overlay=None, overlay_cmap=alpha_to_red_cmap, overlay_vmin=None, overlay_vmax=None):
     """
-    Plot equally spaced slices of a 3D image along every axis.
+    Plot equally spaced slices of a 3D image (and an overlay) along every axis
+    
+    Args:
+        struct_arr (3D array or tensor): The 3D array to plot (usually from a nifti file).
+        num_slices (int): The number of slices to plot for each dimension.
+        cmap: The colormap for the image (default: `'gray'`).
+        vmin (float): Same as in matplotlib.imshow. If `None`, take the global minimum of `struct_arr`.
+        vmax (float): Same as in matplotlib.imshow. If `None`, take the global maximum of `struct_arr`.
+        overlay (3D array or tensor): The 3D array to plot as an overlay on top of the image. Same size as `struct_arr`.
+        overlay_cmap: The colomap for the overlay (default: `alpha_to_red_cmap`). 
+        overlay_vmin (float): Same as in matplotlib.imshow. If `None`, take the global minimum of `overlay`.
+        overlay_vmax (float): Same as in matplotlib.imshow. If `None`, take the global maximum of `overlay`.
     """
     if vmin is None:
         vmin = struct_arr.min()
@@ -89,20 +105,17 @@ def plot_slices(struct_arr, overlay=None, num_slices=10, overlay_cmap=None, vmin
     if overlay_vmax is None and overlay is not None:
         overlay_vmax = overlay.max()
     print(vmin, vmax, overlay_vmin, overlay_vmax)
-    
-    if overlay_cmap is None:
-        overlay_cmap = alpha_cmap
         
     fig, axes = plt.subplots(3, 8, figsize=(15, 6))
     intervals = np.asarray(struct_arr.shape) / (num_slices - 1)
 
-    for axis, axis_label in zip([0, 1, 2], ['x', 'x', 'z']):
+    for axis, axis_label in zip([0, 1, 2], ['x', 'y', 'z']):
         for i, ax in enumerate(axes[axis]):
             i_slice = int(intervals[axis] / 2 + i * intervals[axis])
             
             plt.sca(ax)
             plt.axis('off')
-            plt.imshow(np.take(struct_arr, i_slice, axis=axis), vmin=vmin, vmax=vmax, cmap='gray', interpolation=None)
+            plt.imshow(np.take(struct_arr, i_slice, axis=axis), vmin=vmin, vmax=vmax, cmap=cmap, interpolation=None)
             plt.text(0.03, 0.97, '{}={}'.format(axis_label, i_slice), color='white', 
                      horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
             
@@ -131,7 +144,7 @@ def animate_slices(struct_arr, overlay=None, axis=0, reverse_direction=False, in
     im = ax.imshow(np.take(struct_arr, 0, axis=axis), vmin=vmin, vmax=vmax, cmap='gray', interpolation=None, animated=True)
     if overlay is not None:
         im_overlay = ax.imshow(np.take(overlay, 0, axis=axis), vmin=overlay_vmin, vmax=overlay_vmax, 
-                               cmap=alpha_cmap, interpolation=None, animated=True)
+                               cmap=alpha_to_red_cmap, interpolation=None, animated=True)
     text = ax.text(0.03, 0.97, '{}={}'.format(axis_label, 0), color='white', 
                    horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
     ax.axis('off')
