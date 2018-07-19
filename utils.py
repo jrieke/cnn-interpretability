@@ -1,12 +1,23 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import numpy as np
+import scipy as sp
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os
+import json
 
 import nibabel as nib
 from scipy.ndimage.interpolation import zoom
+
+
+def save_history(filename, trainer):
+    with open(filename, 'w+') as f:
+        json.dump(trainer.history.epoch_metrics, f)
+        
+def load_history(filename):
+    with open(filename) as f:
+        return json.load(f)
 
 
 def plot_learning_curve(history):
@@ -20,6 +31,7 @@ def plot_learning_curve(history):
     epochs = range(1, len(history['loss'])+1)
 
     plt.sca(axes[0])
+    plt.grid()
     plt.plot(epochs, history['loss'], 'b-', label='Train')
     try:
         plt.plot(epochs, history['val_loss'], 'b--', label='Val')
@@ -30,6 +42,7 @@ def plot_learning_curve(history):
     plt.legend()
 
     plt.sca(axes[1])
+    plt.grid()
     plt.plot(epochs, history['acc_metric'], 'r-', label='Train')
     try:
         plt.plot(epochs, history['val_acc_metric'], 'r--', label='Val')
@@ -83,7 +96,9 @@ red_to_alpha_cmap = mpl.colors.ListedColormap(red_to_alpha_cmap)
 # TODO: Show figure colorbar.
 # TODO: Calculate vmin and vmax automatically, maybe by log-scaling the overlay.
 
-def plot_slices(struct_arr, num_slices=10, cmap='gray', vmin=None, vmax=None, overlay=None, overlay_cmap=alpha_to_red_cmap, overlay_vmin=None, overlay_vmax=None):
+#from scipy import ndimage
+
+def plot_slices(struct_arr, num_slices=7, cmap='gray', vmin=None, vmax=None, overlay=None, overlay_cmap=alpha_to_red_cmap, overlay_vmin=None, overlay_vmax=None):
     """
     Plot equally spaced slices of a 3D image (and an overlay) along every axis
     
@@ -108,21 +123,23 @@ def plot_slices(struct_arr, num_slices=10, cmap='gray', vmin=None, vmax=None, ov
         overlay_vmax = overlay.max()
     print(vmin, vmax, overlay_vmin, overlay_vmax)
         
-    fig, axes = plt.subplots(3, 8, figsize=(15, 6))
-    intervals = np.asarray(struct_arr.shape) / (num_slices - 1)
+    fig, axes = plt.subplots(3, num_slices, figsize=(15, 6))
+    intervals = np.asarray(struct_arr.shape) / num_slices
 
     for axis, axis_label in zip([0, 1, 2], ['x', 'y', 'z']):
         for i, ax in enumerate(axes[axis]):
-            i_slice = int(intervals[axis] / 2 + i * intervals[axis])
+            i_slice = int(np.round(intervals[axis] / 2 + i * intervals[axis]))
+            #print(axis_label, 'plotting slice', i_slice)
             
             plt.sca(ax)
             plt.axis('off')
-            plt.imshow(np.take(struct_arr, i_slice, axis=axis), vmin=vmin, vmax=vmax, cmap=cmap, interpolation=None)
+            plt.imshow(sp.ndimage.rotate(np.take(struct_arr, i_slice, axis=axis), 90), vmin=vmin, vmax=vmax, 
+                       cmap=cmap, interpolation=None)
             plt.text(0.03, 0.97, '{}={}'.format(axis_label, i_slice), color='white', 
                      horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
             
             if overlay is not None:
-                plt.imshow(np.take(overlay, i_slice, axis=axis), cmap=overlay_cmap, 
+                plt.imshow(sp.ndimage.rotate(np.take(overlay, i_slice, axis=axis), 90), cmap=overlay_cmap, 
                            vmin=overlay_vmin, vmax=overlay_vmax, interpolation=None)
 
 def animate_slices(struct_arr, overlay=None, axis=0, reverse_direction=False, interval=40, vmin=None, vmax=None, overlay_vmin=None, overlay_vmax=None):
