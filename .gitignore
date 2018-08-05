@@ -1,5 +1,7 @@
 *.pyc
 .DS_Store
 .ipynb_checkpoints
-data
+logs
+figures
+output
 nohup.out
