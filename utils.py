@@ -4,6 +4,7 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.animation
 import os
 import json
 
@@ -182,3 +183,12 @@ def animate_slices(struct_arr, overlay=None, axis=0, reverse_direction=False, in
         frames = np.arange(0, num_frames)
     
     return mpl.animation.FuncAnimation(fig, update, frames=frames, interval=interval, blit=True)
+
+
+
+from scipy import ndimage
+
+def resize_image(img, size, interpolation=0):
+    """Resize img to size. Interpolation between 0 and 5."""
+    zoom_factors = np.asarray(size) / np.asarray(img.shape)
+    return sp.ndimage.zoom(img, zoom_factors, order=interpolation)
