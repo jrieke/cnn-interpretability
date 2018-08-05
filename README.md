@@ -1,9 +1,13 @@
-Code for my paper: **Visualizing Convolutional Networks for MRI-based Diagnosis of Alzheimer’s Disease**, to be presented at [MLCN 2018](https://mlcn2018.com/)
+# Visualizing Convolutional Networks for MRI-based Diagnosis of Alzheimer’s Disease
+
+This is the code for a paper to be presented at [MLCN 2018](https://mlcn2018.com/) by Johannes Rieke, Fabian Eitel, Martin Weygandt, John-Dylan Haynes and Kerstin Ritter.
 
 **Abstract:** Visualizing and interpreting convolutional neural networks (CNNs) is an important task to increase trust in automatic medical decision making systems. In this study, we train a 3D CNN to detect Alzheimer’s disease based on structural MRI scans of the brain. Then, we apply four different gradient-based and occlusion-based visualization methods that explain the network’s classification decisions by highlight- ing relevant areas in the input image. We compare the methods qualita- tively and quantitatively. We find that all four methods focus on brain regions known to be involved in Alzheimer’s disease, such as inferior and middle temporal gyrus. While the occlusion-based methods focus more on specific regions, the gradient-based methods pick up distributed rel- evance patterns. Additionally, we find that the distribution of relevance varies across patients, with some having a stronger focus on the temporal lobe, whereas for others more cortical areas are relevant. In summary, we show that applying different visualization methods is important to understand the decisions of a CNN, a step that is crucial to increase clinical impact and trust in computer-based decision support systems.
 
+![Heatmaps](figures/heatmaps-ad.png)
 
-# Code Structure
+
+## Code Structure
 
 The codebase uses PyTorch and Jupyter notebooks. The main files for the paper are:
 
@@ -16,7 +20,7 @@ Additionally, there are two other notebooks:
 - `small-dataset.ipynb` contains some old code to run a similar experiment on a smaller dataset.
 
 
-# Data
+## Data
 
 The MRI scans used for training are from the [Alzheimer Disease Neuroimaging Initiative (ADNI)](http://adni.loni.usc.edu/). The data is free but you need to apply for access on http://adni.loni.usc.edu/. Once you have an account, go [here](http://adni.loni.usc.edu/data-samples/access-data/) and log in. You need to download two things:
 
@@ -27,7 +31,7 @@ These are the 1.5 Tesla scans that we used to train the model in the paper. This
 
 
 
-# Requirements
+## Requirements
 
 - Python 2 (mostly compatible with Python 3 syntax, but not tested)
 - Scientific packages (included with anaconda): numpy, scipy, matplotlib, pandas, jupyter, scikit-learn
@@ -37,7 +41,7 @@ These are the 1.5 Tesla scans that we used to train the model in the paper. This
 
 
 
-# Non-pytorch models
+## Non-pytorch models
 If your model is not in pytorch, but you still want to use the visualization methods, you can try to transform the model to pytorch ([overview of conversion tools](https://github.com/ysh329/deep-learning-model-convertor)).
 
 For keras to pytorch, I can recommend [nn-transfer](https://github.com/gzuidhof/nn-transfer). If you use it, keep in mind that by default, pytorch uses channels-first format and keras channels-last format for images. Even though nn-transfer takes care of this difference for the orientation of the convolution kernels, you may still need to permute your dimensions in the pytorch model between the convolutional and fully-connected stage (for 3D images, I did `x = x.permute(0, 2, 3, 4, 1).contiguous()`). The safest bet is to switch keras to use channels-first as well, then nn-transfer should handle everything by itself.
