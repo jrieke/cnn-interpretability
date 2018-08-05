@@ -10,13 +10,16 @@ import json
 
 import nibabel as nib
 from scipy.ndimage.interpolation import zoom
+from scipy import ndimage
 
 
 def save_history(filename, trainer):
+    """Save the history from a torchsample trainer to file."""
     with open(filename, 'w+') as f:
         json.dump(trainer.history.epoch_metrics, f)
         
 def load_history(filename):
+    """Load the history from a torchsample trainer from file."""
     with open(filename) as f:
         return json.load(f)
 
@@ -78,10 +81,6 @@ def save_nifti(file_path, struct_arr):
 
 # Transparent colormap (alpha to red), that is used for plotting an overlay.
 # See https://stackoverflow.com/questions/37327308/add-alpha-to-an-existing-matplotlib-colormap
-#cmap = plt.cm.Reds
-#alpha_cmap = cmap(np.arange(cmap.N-20))
-#print(cmap.N)
-#print(alpha_cmap)
 alpha_to_red_cmap = np.zeros((256, 4))
 alpha_to_red_cmap[:, 0] = 0.8
 alpha_to_red_cmap[:, -1] = np.linspace(0, 1, 256)#cmap.N-20)  # alpha values
@@ -91,13 +90,6 @@ red_to_alpha_cmap = np.zeros((256, 4))
 red_to_alpha_cmap[:, 0] = 0.8
 red_to_alpha_cmap[:, -1] = np.linspace(1, 0, 256)#cmap.N-20)  # alpha values
 red_to_alpha_cmap = mpl.colors.ListedColormap(red_to_alpha_cmap)
-
-
-# TODO: Calculating the slice numbers gives index error for some values of num_slices.
-# TODO: Show figure colorbar.
-# TODO: Calculate vmin and vmax automatically, maybe by log-scaling the overlay.
-
-#from scipy import ndimage
 
 def plot_slices(struct_arr, num_slices=7, cmap='gray', vmin=None, vmax=None, overlay=None, overlay_cmap=alpha_to_red_cmap, overlay_vmin=None, overlay_vmax=None):
     """
@@ -185,10 +177,7 @@ def animate_slices(struct_arr, overlay=None, axis=0, reverse_direction=False, in
     return mpl.animation.FuncAnimation(fig, update, frames=frames, interval=interval, blit=True)
 
 
-
-from scipy import ndimage
-
 def resize_image(img, size, interpolation=0):
-    """Resize img to size. Interpolation between 0 and 5."""
+    """Resize img to size. Interpolation between 0 (no interpolation) and 5 (maximum interpolation)."""
     zoom_factors = np.asarray(size) / np.asarray(img.shape)
     return sp.ndimage.zoom(img, zoom_factors, order=interpolation)

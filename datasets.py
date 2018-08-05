@@ -25,8 +25,7 @@ from tabulate import tabulate
 
 
 # Binary brain mask used to cut out the skull.
-mask = utils.load_nifti('/analysis/share/Ritter/Masks/ICBM_152/mni_icbm152_nlin_asym_09c/binary_brain_mask.nii.gz')
-
+mask = utils.load_nifti('data/binary_brain_mask.nii.gz')
 
 
 # ------------------------- ADNI data tables -----------------------------------

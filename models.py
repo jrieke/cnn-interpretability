@@ -9,7 +9,6 @@ import pandas as pd
 import os
 import utils
 from tqdm import tqdm_notebook
-from sklearn.model_selection import train_test_split
 import multiprocessing
 import json
 
@@ -21,6 +20,7 @@ from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 
 from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
 
 # This is my custom fork of torchsample which fixes some bugs.
 # Install via: pip install git+https://github.com/jrieke/torchsample
@@ -137,6 +137,7 @@ class KorolevModel(nn.Module):
 
 # ------------------------------ Wrappers ------------------------------
 def build_model():
+    """Build the model as used in the paper, wrap it in a torchsample trainer and move it to cuda."""
     # Option 1: Model inspired by Khvostikov et al. 2017
     net = ClassificationModel3D(dropout=0.8, dropout2=0)
     # Tested 0.001 and 0.00001 on subset of the training dataset (10 AD/10 NC), got worse results in both cases.
@@ -163,6 +164,7 @@ def build_model():
 
 
 def train_model(trainer, train_loader, val_loader, cuda_device, num_epoch=1):
+    """Train and evaluate the model via torchsample."""
     trainer.fit_loader(train_loader,
             val_loader=val_loader,
             num_epoch=num_epoch,
