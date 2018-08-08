@@ -26,13 +26,24 @@ Additionally, there are two other notebooks:
 
 ## Data
 
-The MRI scans used for training are from the [Alzheimer Disease Neuroimaging Initiative (ADNI)](http://adni.loni.usc.edu/). The data is free but you need to apply for access on http://adni.loni.usc.edu/. Once you have an account, go [here](http://adni.loni.usc.edu/data-samples/access-data/) and log in. You need to download two things:
+The MRI scans used for training are from the [Alzheimer Disease Neuroimaging Initiative (ADNI)](http://adni.loni.usc.edu/). The data is free but you need to apply for access on http://adni.loni.usc.edu/. Once you have an account, go [here](http://adni.loni.usc.edu/data-samples/access-data/) and log in. 
 
-- The data table: Go to "Download" -> "Study Data" -> "Study Info" and download the file "ADNI 1.5T MRI Standardized Lists". Unpack the zip file and move the file "ADNI_CompleteAnnual2YearVisitList_8_22_12.csv" to the folder `data` in this repo.
-- The images: You need to download all scans from the table above. TODO: Add more detailled description. 
 
-These are the 1.5 Tesla scans that we used to train the model in the paper. This repo also contains code to train on the 3 Tesla scans or on both types of scans. 
+### Tables
 
+We included csv tables with metadata for all images we used in this repo (`data/ADNI/ADNI_tables`). These tables were made by combining several data tables from ADNI. There is one table for 1.5 Tesla scans and one for 3 Tesla scans. In the paper, we trained only on the 1.5 Tesla images. 
+
+
+### Images
+
+To download the corresponding images, log in on the ADNI page, go to "Download" -> "Image Collections" -> "Data Collections". In the box on the left, select "Other shared collections" -> "ADNI" -> "ADNI1:Annual 2 Yr 1.5T" (or the corresponding collection for 3T) and download all images. We preprocessed all images by non-linear registration to a 1 mm isotropic ICBM template via ANTs (http://stnava.github.io/ANTs/) with default parameters. 
+
+To be consistent with the codebase, put the images into the folders `data/ADNI/ADNI_2Yr_15T_quick_preprocessed` (for the 1.5 Tesla images) or `data/ADNI/ADNI_2Yr_3T_preprocessed` (for the 3 Tesla images). Within these folders, each image should have the following path: `<PTID>/<Visit (spaces removed)>/<PTID>_<Scan.Date (/ replaced by -)>_<Visit (spaces removed)>_<Image.ID>_<DX>_Warped.nii.gz`. If you want to use a different directory structure, you need to change the method `get_image_filepath` and/or the filenames in `datasets.py`. 
+
+
+### Users from Ritter/Haynes lab
+
+If you're working in the Ritter/Haynes lab at Charité Berlin, you don't need to download any data, but simply uncomment the correct `ADNI_DIR` variable in `datasets.py`. 
 
 
 ## Requirements

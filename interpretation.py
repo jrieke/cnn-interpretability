@@ -25,7 +25,7 @@ from utils import resize_image
 
 
 # ---------------------------- Interpretation methods --------------------------------
-def sensitivity_analysis(model, image_tensor, target_class=None, postprocess='abs', output_mode=None, cuda=False, verbose=False):
+def sensitivity_analysis(model, image_tensor, target_class=None, postprocess='abs', apply_softmax=True, cuda=False, verbose=False):
     """
     Perform sensitivity analysis (via backpropagation; Simonyan et al. 2014) to determine the relevance of each image pixel 
     for the classification decision. Return a relevance heatmap over the input image.
@@ -37,7 +37,9 @@ def sensitivity_analysis(model, image_tensor, target_class=None, postprocess='ab
                       If `None` (default), use the most likely class from the `model`s output.
         postprocess (None or 'abs' or 'square'): The method to postprocess the heatmap with. `'abs'` is used 
                                                  in Simonyan et al. 2014, `'square'` is used in Montavon et al. 2018.
-        output_mode (None or 'binary' or 'categorical'): Whether the output format of the `model` is binary 
+        apply_softmax (boolean): Whether to apply the softmax function to the output. Useful for models that are trained 
+                                 with `torch.nn.CrossEntropyLoss` and do not apply softmax themselves.
+        appl (None or 'binary' or 'categorical'): Whether the output format of the `model` is binary 
                                                          (i.e. one output neuron with sigmoid activation) or categorical 
                                                          (i.e. multiple output neurons with softmax activation). 
                                                          If `None` (default), infer from the shape of the output. 
@@ -47,8 +49,6 @@ def sensitivity_analysis(model, image_tensor, target_class=None, postprocess='ab
     Returns:
         A numpy array of the same shape as image_tensor, indicating the relevance of each image pixel. 
     """
-    if output_mode not in [None, 'binary', 'categorical']:
-        raise ValueError("output_mode must be None, 'binary' or 'categorical'")
     if postprocess not in [None, 'abs', 'square']:
         raise ValueError("postprocess must be None, 'abs' or 'square'")
     
@@ -58,32 +58,21 @@ def sensitivity_analysis(model, image_tensor, target_class=None, postprocess='ab
         image_tensor = image_tensor.cuda()
     X = Variable(image_tensor[None], requires_grad=True)  # add dimension to simulate batch
     output = model(X)
-    
-    # TODO: This is a workaround because the model does not apply sigmoid (it uses the BCEWithLogits loss).
-    #       Find a better solution to do this outside of this function.
-    output = F.softmax(output)
+    if apply_softmax:
+        output = F.softmax(output)
     
     # Backward pass.
     model.zero_grad()
-    if output_mode is None:
-        output_mode = 'binary' if output.size(1) == 1 else 'categorical'
-    if output_mode == 'binary':  # binary output
-        if verbose: print('Image was classified with value:', output.data[0, 0])
-        gradient = torch.ones(output.size())
-        if cuda:
-            gradient = gradient.cuda()
-        output.backward(gradient=gradient)
-    elif output_mode == 'categorical':  # categorical output
-        output_class = output.max(1)[1].data[0]
-        if verbose: print('Image was classified as', output_class, 'with probability', output.max(1)[0].data[0])
-        one_hot_output = torch.zeros(output.size())
-        if target_class is None:
-            one_hot_output[0, output_class] = 1
-        else:
-            one_hot_output[0, target_class] = 1
-        if cuda:
-            one_hot_output = one_hot_output.cuda()
-        output.backward(gradient=one_hot_output)
+    output_class = output.max(1)[1].data[0]
+    if verbose: print('Image was classified as', output_class, 'with probability', output.max(1)[0].data[0])
+    one_hot_output = torch.zeros(output.size())
+    if target_class is None:
+        one_hot_output[0, output_class] = 1
+    else:
+        one_hot_output[0, target_class] = 1
+    if cuda:
+        one_hot_output = one_hot_output.cuda()
+    output.backward(gradient=one_hot_output)
         
     relevance_map = X.grad.data[0].cpu().numpy()
     
@@ -96,8 +85,7 @@ def sensitivity_analysis(model, image_tensor, target_class=None, postprocess='ab
         return relevance_map
         
         
-# TODO: Document that model needs an attribute of nn.ReLU and not F.relu.
-def guided_backprop(model, image_tensor, target_class=None, postprocess='abs', output_mode=None, cuda=False, verbose=False):
+def guided_backprop(model, image_tensor, target_class=None, postprocess='abs', apply_softmax=True, cuda=False, verbose=False):
     """
     Perform guided backpropagation (Springenberg et al. 2015) to determine the relevance of each image pixel 
     for the classification decision. Return a relevance heatmap over the input image.
@@ -112,10 +100,8 @@ def guided_backprop(model, image_tensor, target_class=None, postprocess='abs', o
                       If `None` (default), use the most likely class from the `model`s output.
         postprocess (None or 'abs' or 'square'): The method to postprocess the heatmap with. `'abs'` is used 
                                                  in Simonyan et al. 2013, `'square'` is used in Montavon et al. 2018.
-        output_mode (None or 'binary' or 'categorical'): Whether the output format of the `model` is binary 
-                                                         (i.e. one output neuron with sigmoid activation) or categorical 
-                                                         (i.e. multiple output neurons with softmax activation). 
-                                                         If `None` (default), infer from the shape of the output. 
+        apply_softmax (boolean): Whether to apply the softmax function to the output. Useful for models that are trained 
+                                 with `torch.nn.CrossEntropyLoss` and do not apply softmax themselves.
         cuda (boolean): Whether to run the computation on a cuda device.
         verbose (boolean): Whether to display additional output during the computation.
         
@@ -144,7 +130,7 @@ def guided_backprop(model, image_tensor, target_class=None, postprocess='abs', o
                 hook_handles.append(hook_handle)
 
         # Calculate backprop with modified ReLUs.
-        relevance_map = sensitivity_analysis(model, image_tensor, target_class=target_class, postprocess=postprocess, output_mode=output_mode, cuda=cuda, verbose=verbose)
+        relevance_map = sensitivity_analysis(model, image_tensor, target_class=target_class, postprocess=postprocess, apply_softmax=apply_softmax, cuda=cuda, verbose=verbose)
         
     finally:
         # Remove hooks from model.
@@ -157,7 +143,7 @@ def guided_backprop(model, image_tensor, target_class=None, postprocess='abs', o
     return relevance_map
 
 
-def occlusion(model, image_tensor, target_class=None, size=50, stride=25, occlusion_value=0, output_mode=None, three_d=None, resize=True, cuda=False, verbose=False):
+def occlusion(model, image_tensor, target_class=None, size=50, stride=25, occlusion_value=0, apply_softmax=True, three_d=None, resize=True, cuda=False, verbose=False):
     """
     Perform occlusion (Zeiler & Fergus 2014) to determine the relevance of each image pixel 
     for the classification decision. Return a relevance heatmap over the input image.
@@ -173,10 +159,8 @@ def occlusion(model, image_tensor, target_class=None, size=50, stride=25, occlus
         size (int): The size of the occlusion patch.
         stride (int): The stride with which to move the occlusion patch across the image.
         occlusion_value (int): The value of the occlusion patch.
-        output_mode (None or 'binary' or 'categorical'): Whether the output format of the `model` is binary 
-                                                         (i.e. one output neuron with sigmoid activation) or categorical 
-                                                         (i.e. multiple output neurons with softmax activation). 
-                                                         If `None` (default), infer from the shape of the output. 
+        apply_softmax (boolean): Whether to apply the softmax function to the output. Useful for models that are trained 
+                                 with `torch.nn.CrossEntropyLoss` and do not apply softmax themselves.
         three_d (boolean): Whether the image is 3 dimensional (e.g. MRI scans). 
                            If `None` (default), infer from the shape of `image_tensor`. 
         resize (boolean): The output from the occlusion method is usually smaller than the original `image_tensor`. 
@@ -196,23 +180,14 @@ def occlusion(model, image_tensor, target_class=None, size=50, stride=25, occlus
     if cuda:
         image_tensor = image_tensor.cuda()
     output = model(Variable(image_tensor[None], requires_grad=False)).cpu()
-        
-    # TODO: This is a workaround because the model does not apply sigmoid (it uses the BCEWithLogits loss).
-    #       Find a better solution to do this outside of this function.
-    output = F.softmax(output)
-    
-    if output_mode is None:
-        output_mode = 'binary' if output.size(1) == 1 else 'categorical'
-        
-    if output_mode == 'binary':  # binary output
-        if verbose: print('Image was classified with value:', output.data.numpy()[0, 0])
-        unoccluded_prob = output.data[0, 0]
-    elif output_mode == 'categorical':  # categorical output
-        output_class = output.max(1)[1].data.numpy()[0]
-        if verbose: print('Image was classified as', output_class, 'with probability', output.max(1)[0].data[0])
-        if target_class is None:
-            target_class = output_class
-        unoccluded_prob = output.max(1)[0].data[0]
+    if apply_softmax:
+        output = F.softmax(output)
+ 
+    output_class = output.max(1)[1].data.numpy()[0]
+    if verbose: print('Image was classified as', output_class, 'with probability', output.max(1)[0].data[0])
+    if target_class is None:
+        target_class = output_class
+    unoccluded_prob = output.data[0, target_class]
         
     width = image_tensor.shape[1]
     height = image_tensor.shape[2]
@@ -259,17 +234,10 @@ def occlusion(model, image_tensor, target_class=None, size=50, stride=25, occlus
             
                     # TODO: Maybe run this batched.
                     output = model(Variable(image_tensor_occluded[None], requires_grad=False))
-                    # TODO: This is a workaround because the model does not apply sigmoid (it uses the BCEWithLogits loss).
-                    #       Find a better solution to do this outside of this function.
-                    output = F.softmax(output)
+                    if apply_softmax:
+                        output = F.softmax(output)
                     
-                    #print(output.data[0, target_class])
-                    if output_mode == 'categorical':
-                        occluded_prob = output.data[0, target_class]
-                    else:
-                        occluded_prob = output.data[0, 0]
-                    
-                    #print(unoccluded_prob, occluded_prob)
+                    occluded_prob = output.data[0, target_class]
                     relevance_map[i_x, i_y, i_z] = unoccluded_prob - occluded_prob
                     
             else:
@@ -279,17 +247,10 @@ def occlusion(model, image_tensor, target_class=None, size=50, stride=25, occlus
                 
                 # TODO: Maybe run this batched.
                 output = model(Variable(image_tensor_occluded[None], requires_grad=False))
+                if apply_softmax:
+                    output = F.softmax(output)
                 
-                # TODO: This is a workaround because the model does not apply sigmoid (it uses the BCEWithLogits loss).
-                #       Find a better solution to do this outside of this function.
-                output = F.softmax(output)
-                    
-                #print(output.data[0, target_class])
-                if output_mode == 'categorical':
-                    occluded_prob = output.data[0, target_class]
-                else:
-                    occluded_prob = output.data[0, 0]
-                    
+                occluded_prob = output.data[0, target_class]
                 relevance_map[i_x, i_y] = unoccluded_prob - ocluded_prob
                 
     relevance_map = np.maximum(relevance_map, 0)
@@ -300,7 +261,7 @@ def occlusion(model, image_tensor, target_class=None, size=50, stride=25, occlus
     return relevance_map
 
 
-def area_occlusion(model, image_tensor, area_masks, target_class=None, occlusion_value=0, output_mode=None, cuda=False, verbose=False):
+def area_occlusion(model, image_tensor, area_masks, target_class=None, occlusion_value=0, apply_softmax=True, cuda=False, verbose=False):
     """
     Perform brain area occlusion to determine the relevance of each image pixel 
     for the classification decision. Return a relevance heatmap over the input image.
@@ -311,10 +272,8 @@ def area_occlusion(model, image_tensor, area_masks, target_class=None, occlusion
         target_class (int): The target output class for which to produce the heatmap. 
                       If `None` (default), use the most likely class from the `model`s output.
         occlusion_value (int): The value of the occlusion patch.
-        output_mode (None or 'binary' or 'categorical'): Whether the output format of the `model` is binary 
-                                                         (i.e. one output neuron with sigmoid activation) or categorical 
-                                                         (i.e. multiple output neurons with softmax activation). 
-                                                         If `None` (default), infer from the shape of the output. 
+        apply_softmax (boolean): Whether to apply the softmax function to the output. Useful for models that are trained 
+                                 with `torch.nn.CrossEntropyLoss` and do not apply softmax themselves.
         cuda (boolean): Whether to run the computation on a cuda device.
         verbose (boolean): Whether to display additional output during the computation.
         
@@ -326,23 +285,14 @@ def area_occlusion(model, image_tensor, area_masks, target_class=None, occlusion
     if cuda:
         image_tensor = image_tensor.cuda()
     output = model(Variable(image_tensor[None], requires_grad=False))
-        
-    # TODO: This is a workaround because the model does not apply sigmoid (it uses the BCEWithLogits loss).
-    #       Find a better solution to do this outside of this function.
-    output = F.softmax(output)
-    
-    if output_mode is None:
-        output_mode = 'binary' if output.size(1) == 1 else 'categorical'
-        
-    if output_mode == 'binary':  # binary output
-        if verbose: print('Image was classified with value:', output.data.cpu().numpy()[0, 0])
-        unoccluded_prob = output.data[0, 0]
-    elif output_mode == 'categorical':  # categorical output
-        output_class = output.max(1)[1].data.cpu().numpy()[0]
-        if verbose: print('Image was classified as', output_class, 'with probability', output.max(1)[0].data[0])
-        if target_class is None:
-            target_class = output_class
-        unoccluded_prob = output.max(1)[0].data[0]
+    if apply_softmax:
+        output = F.softmax(output)
+   
+    output_class = output.max(1)[1].data.cpu().numpy()[0]
+    if verbose: print('Image was classified as', output_class, 'with probability', output.max(1)[0].data[0])
+    if target_class is None:
+        target_class = output_class
+    unoccluded_prob = output.data[0, target_class]
         
     relevance_map = torch.zeros(image_tensor.shape[1:])
     if cuda:
@@ -356,14 +306,10 @@ def area_occlusion(model, image_tensor, area_masks, target_class=None, occlusion
         image_tensor_occluded = image_tensor * (1 - area_mask).view(image_tensor.shape)
         
         output = model(Variable(image_tensor_occluded[None], requires_grad=False))
-        # TODO: This is a workaround because the model does not apply sigmoid (it uses the BCEWithLogits loss).
-        #       Find a better solution to do this outside of this function.
-        output = F.softmax(output)
-        if output_mode == 'categorical':
-            occluded_prob = output.data[0, target_class]
-        else:
-            occluded_prob = output.data[0, 0]
+        if apply_softmax:
+            output = F.softmax(output)
             
+        occluded_prob = output.data[0, target_class]
         relevance_map[area_mask.view(image_tensor.shape) == 1] = (unoccluded_prob - occluded_prob)
 
     relevance_map = relevance_map.cpu().numpy()
@@ -379,7 +325,7 @@ def all_children(model):
         children.extend(all_children(child))
     return children
 
-def grad_cam(model, image_tensor, target_class=None, last_conv_layer=None, resize=True, interpolation=1, output_mode=None, cuda=False, verbose=False):
+def grad_cam(model, image_tensor, target_class=None, last_conv_layer=None, resize=True, interpolation=1, apply_softmax=True, cuda=False, verbose=False):
     """
     Perform Grad-CAM (Selvaraju et al. 2017) to determine the relevance of each image pixel 
     for the classification decision. Return a relevance heatmap over the input image.
@@ -396,19 +342,14 @@ def grad_cam(model, image_tensor, target_class=None, last_conv_layer=None, resiz
         resize (boolean): The output from the occlusion method is usually smaller than the original `image_tensor`. 
                           If `True` (default), the output will be resized to fit the original shape.
         interpolation (int): The interpolation to use for the resizing (0-5).
-        output_mode (None or 'binary' or 'categorical'): Whether the output format of the `model` is binary 
-                                                         (i.e. one output neuron with sigmoid activation) or categorical 
-                                                         (i.e. multiple output neurons with softmax activation). 
-                                                         If `None` (default), infer from the shape of the output. 
+        apply_softmax (boolean): Whether to apply the softmax function to the output. Useful for models that are trained 
+                                 with `torch.nn.CrossEntropyLoss` and do not apply softmax themselves.
         cuda (boolean): Whether to run the computation on a cuda device.
         verbose (boolean): Whether to display additional output during the computation.
         
     Returns:
         A numpy array of the same shape as image_tensor, indicating the relevance of each image pixel. 
     """
-    
-    if output_mode not in [None, 'binary', 'categorical']:
-        raise ValueError("output_mode must be None, 'binary' or 'categorical'")
     
     image_tensor = torch.Tensor(image_tensor)
     if cuda:
@@ -444,36 +385,23 @@ def grad_cam(model, image_tensor, target_class=None, last_conv_layer=None, resiz
     try:
         # Step 3: Run model forward (will store feature maps of the last conv layer).
         output = model(X)
-        
-        # TODO: This is a workaround because the model does not apply sigmoid (it uses the BCEWithLogits loss).
-        #       Find a better solution to do this outside of this function.
-        output = F.softmax(output)
+        if apply_softmax:
+            output = F.softmax(output)
         
         # Step 4: Run model backwards (will store gradient of the last conv layer).
         model.zero_grad()
-        if output_mode is None:
-            output_mode = 'binary' if output.size(1) == 1 else 'categorical'
-        if output_mode == 'binary':  # binary output
-            if verbose: print('Image was classified with value:', output.data[0, 0])
-            # TODO: Rename.
-            gradient = torch.ones(output.size())
-            if cuda:
-                gradient = gradient.cuda()
-            output.backward(gradient=gradient)
-            print(gradient)
-        elif output_mode == 'categorical':  # categorical output
-            output_class = output.max(1)[1].cpu().data.numpy()[0]
-            if verbose: print('Image was classified as', output_class, 'with probability', output.max(1)[0].cpu().data.numpy()[0])
-            one_hot_output = torch.zeros(output.shape)
-            if cuda: 
-                one_hot_output = one_hot_output.cuda()
-            if target_class is None:
-                one_hot_output[0, output_class] = 1
-            else:
-                one_hot_output[0, target_class] = 1
-            print(one_hot_output)
-            output.backward(gradient=one_hot_output)
-            #print(one_hot_output)
+        output_class = output.max(1)[1].cpu().data.numpy()[0]
+        if verbose: print('Image was classified as', output_class, 'with probability', output.max(1)[0].cpu().data.numpy()[0])
+        one_hot_output = torch.zeros(output.shape)
+        if cuda: 
+            one_hot_output = one_hot_output.cuda()
+        if target_class is None:
+            one_hot_output[0, output_class] = 1
+        else:
+            one_hot_output[0, target_class] = 1
+        print(one_hot_output)
+        output.backward(gradient=one_hot_output)
+        #print(one_hot_output)
         
         # TODO: Maybe implement this in native pytorch and return a tensor.
         # Step 5: Calculate CAM as linear combination of each feature map and its averaged gradient.
