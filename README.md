@@ -67,7 +67,7 @@ For keras to pytorch, I can recommend [nn-transfer](https://github.com/gzuidhof/
 If you use our code, please cite our [paper](http://arxiv.org/abs/1808.02874):
 
     @inproceedings{rieke2018,
-      title={Visualizing Convolutional Networks for MRI-based Diagnosis of Alzheimer’s Disease},
+      title={Visualizing Convolutional Networks for MRI-based Diagnosis of Alzheimer's Disease},
       author={Rieke, Johannes and Eitel, Fabian and Weygandt, Martin and Haynes, John-Dylan and Ritter, Kerstin},
       booktitle={Machine Learning in Clinical Neuroimaging (MLCN)},
       year={2018}
