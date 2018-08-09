@@ -11,6 +11,7 @@ Our paper will be presented at [MLCN 2018](https://mlcn2018.com/) (20th Sep 2018
 ![Heatmaps](figures/heatmaps-ad.png)
 
 
+
 ## Code Structure
 
 The codebase uses PyTorch and Jupyter notebooks. The main files for the paper are:
@@ -22,6 +23,13 @@ The codebase uses PyTorch and Jupyter notebooks. The main files for the paper ar
 Additionally, there are two other notebooks:
 - `interpretation-photos.ipynb` uses the same visualization methods as in the paper but applies them to 2D photos. This might be an easier introduction to the topic. 
 - `small-dataset.ipynb` contains some old code to run a similar experiment on a smaller dataset.
+
+
+
+## Trained Model and Heatmaps
+
+If you don't want to train the model and/or run the computations for the heatmaps yourself, you can just download my results: [Here](https://drive.google.com/file/d/14m6v9DOubxrid20BbVyTgOOVF-K7xwV-/view?usp=sharing) is the final model that I used to produce all heatmaps in the paper (as a pytorch state dict; see paper or code for more details on how the model was trained). And [here](https://drive.google.com/open?id=1feEpR-GhKUe_YTkKu9dlnYIKsyF6fyei) are the numpy arrays that contain all average relevance heatmaps (as a compressed numpy .npz file). Please have a look at `interpretations-mri.ipynb` for instructions on how to load and use these files.
+
 
 
 ## Data
@@ -46,6 +54,7 @@ To be consistent with the codebase, put the images into the folders `data/ADNI/A
 If you're working in the Ritter/Haynes lab at Charité Berlin, you don't need to download any data, but simply uncomment the correct `ADNI_DIR` variable in `datasets.py`. 
 
 
+
 ## Requirements
 
 - Python 2 (mostly compatible with Python 3 syntax, but not tested)
@@ -60,6 +69,7 @@ If you're working in the Ritter/Haynes lab at Charité Berlin, you don't need to
 If your model is not in pytorch, but you still want to use the visualization methods, you can try to transform the model to pytorch ([overview of conversion tools](https://github.com/ysh329/deep-learning-model-convertor)).
 
 For keras to pytorch, I can recommend [nn-transfer](https://github.com/gzuidhof/nn-transfer). If you use it, keep in mind that by default, pytorch uses channels-first format and keras channels-last format for images. Even though nn-transfer takes care of this difference for the orientation of the convolution kernels, you may still need to permute your dimensions in the pytorch model between the convolutional and fully-connected stage (for 3D images, I did `x = x.permute(0, 2, 3, 4, 1).contiguous()`). The safest bet is to switch keras to use channels-first as well, then nn-transfer should handle everything by itself.
+
 
 
 ## Citation
