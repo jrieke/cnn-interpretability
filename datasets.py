@@ -31,10 +31,10 @@ mask = utils.load_nifti('data/binary_brain_mask.nii.gz')
 # ------------------------- ADNI data tables -----------------------------------
 
 # Ritter/Haynes lab file system at BCCN Berlin. 
-#ADNI_DIR = '/analysis/share/ADNI'
+ADNI_DIR = '/analysis/share/ADNI'
 
 # Local.
-ADNI_DIR = 'data/ADNI'
+#ADNI_DIR = 'data/ADNI'
 
 # Filepaths for 3 Tesla scans.
 table_3T = os.path.join(ADNI_DIR, 'ADNI_tables/customized/DxByImgClean_CompleteAnnual2YearVisitList_3T.csv')
@@ -42,7 +42,7 @@ image_dir_3T = os.path.join(ADNI_DIR, 'ADNI_2Yr_3T_preprocessed')
 corrupt_images_3T = ['037_S_0501/Baseline', '037_S_0501/Month12', '037_S_0501/Month24', '051_S_1123/Baseline', '051_S_1123/Month12', '051_S_1123/Month24', '116_S_0649/Month12', '116_S_0649/Month24', '116_S_1232/Baseline', '027_S_1387/Baseline', '027_S_1387/Month12', '027_S_1387/Month24', '116_S_0382/Baseline', '027_S_0404/Baseline', '027_S_0404/Month24', '027_S_1385/Month12', '023_S_0376/Month12', '023_S_0030/Baseline', '023_S_0030/Month24', '023_S_1247/Baseline', '023_S_1247/Month12', '027_S_1082/Month24', '018_S_0450/Baseline', '005_S_0572/Baseline', '005_S_0572/Month12', '005_S_0572/Month24']
 
 # Filepaths for 1.5 Tesla scans.
-table_15T = os.path.join(ADNI_DIR, 'ADNI_tables/DxByImgClean_CompleteAnnual2YearVisitList_1_5T.csv')
+table_15T = os.path.join(ADNI_DIR, 'ADNI_tables/customized/DxByImgClean_CompleteAnnual2YearVisitList_1_5T.csv')
 image_dir_15T = os.path.join(ADNI_DIR, 'ADNI_2Yr_15T_quick_preprocessed')
 corrupt_images_15T = ['067_S_0077/Screening']
 
