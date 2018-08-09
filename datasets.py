@@ -31,10 +31,10 @@ mask = utils.load_nifti('data/binary_brain_mask.nii.gz')
 # ------------------------- ADNI data tables -----------------------------------
 
 # Ritter/Haynes lab file system at BCCN Berlin. 
-ADNI_DIR = '/analysis/share/ADNI'
+#ADNI_DIR = '/analysis/share/ADNI'
 
 # Local.
-#ADNI_DIR = 'data/ADNI'
+ADNI_DIR = 'data/ADNI'
 
 # Filepaths for 3 Tesla scans.
 table_3T = os.path.join(ADNI_DIR, 'ADNI_tables/customized/DxByImgClean_CompleteAnnual2YearVisitList_3T.csv')
