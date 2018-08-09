@@ -30,7 +30,7 @@ mask = utils.load_nifti('data/binary_brain_mask.nii.gz')
 
 # ------------------------- ADNI data tables -----------------------------------
 
-# Ritter lab file system. 
+# Ritter/Haynes lab file system at BCCN Berlin. 
 #ADNI_DIR = '/analysis/share/ADNI'
 
 # Local.

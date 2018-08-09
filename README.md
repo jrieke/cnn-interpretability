@@ -2,9 +2,9 @@
 
 **Johannes Rieke, Fabian Eitel, Martin Weygandt, John-Dylan Haynes and Kerstin Ritter**
 
-Our paper will be presented at [MLCN 2018](https://mlcn2018.com/).
+Our paper will be presented at [MLCN 2018](https://mlcn2018.com/) (20th Sep 2018 in Granada, Spain).
 
-**Preprint:** TODO
+**Preprint:** http://arxiv.org/abs/1808.02874
 
 **Abstract:** Visualizing and interpreting convolutional neural networks (CNNs) is an important task to increase trust in automatic medical decision making systems. In this study, we train a 3D CNN to detect Alzheimer’s disease based on structural MRI scans of the brain. Then, we apply four different gradient-based and occlusion-based visualization methods that explain the network’s classification decisions by highlight- ing relevant areas in the input image. We compare the methods qualita- tively and quantitatively. We find that all four methods focus on brain regions known to be involved in Alzheimer’s disease, such as inferior and middle temporal gyrus. While the occlusion-based methods focus more on specific regions, the gradient-based methods pick up distributed rel- evance patterns. Additionally, we find that the distribution of relevance varies across patients, with some having a stronger focus on the temporal lobe, whereas for others more cortical areas are relevant. In summary, we show that applying different visualization methods is important to understand the decisions of a CNN, a step that is crucial to increase clinical impact and trust in computer-based decision support systems.
 
@@ -64,6 +64,11 @@ For keras to pytorch, I can recommend [nn-transfer](https://github.com/gzuidhof/
 
 ## Citation
 
-If you use our code, please cite our paper:
+If you use our code, please cite our [paper](http://arxiv.org/abs/1808.02874):
 
-TODO
+    @inproceedings{rieke2018,
+      title={Visualizing Convolutional Networks for MRI-based Diagnosis of Alzheimer’s Disease},
+      author={Rieke, Johannes and Eitel, Fabian and Weygandt, Martin and Haynes, John-Dylan and Ritter, Kerstin},
+      booktitle={Machine Learning in Clinical Neuroimaging (MLCN)},
+      year={2018}
+    }
