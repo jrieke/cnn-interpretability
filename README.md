@@ -2,7 +2,7 @@
 
 **Johannes Rieke, Fabian Eitel, Martin Weygandt, John-Dylan Haynes and Kerstin Ritter**
 
-Our paper will be presented at [MLCN 2018](https://mlcn2018.com/) (20th Sep 2018 in Granada, Spain).
+Our paper was presented on the [MLCN workshop](https://mlcn2018.com/) at MICCAI 2018 in Granada ([Slides](https://drive.google.com/open?id=1EKHvlWq4_-NC7HQPAbZc_ZaeNZMTQwgh)).
 
 **Preprint:** http://arxiv.org/abs/1808.02874
 
@@ -11,6 +11,22 @@ Our paper will be presented at [MLCN 2018](https://mlcn2018.com/) (20th Sep 2018
 ![Heatmaps](figures/heatmaps-ad.png)
 
 
+## Quickstart
+
+You can use the visualization methods in this repo on your own model (PyTorch; for other frameworks see below) like this:
+
+    from interpretation import sensitivity_analysis
+    from utils import plot_slices
+
+    cnn = load_model()
+    mri_scan = load_scan()
+
+    heatmap = sensitivity_analysis(cnn, mri_scan, cuda=True)
+    plot_slices(mri_scan, overlay=heatmap)
+    
+`heatmap` is a numpy array containing the relevance heatmap. The methods should work for 2D and 3D images alike. Currently, four methods are implemented and tested: `sensitivity_analysis`, `guided_backprop`, `occlusion`, `area_occlusion`. There is also a rough implementation of `grad_cam`, which seems to work on 2D photos, but not on brain scans. Please look at `interpretation.py` for further documentation. 
+    
+    
 
 ## Code Structure
 
